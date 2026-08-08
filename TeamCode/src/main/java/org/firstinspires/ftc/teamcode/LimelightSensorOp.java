@@ -8,7 +8,7 @@ import com.qualcomm.hardware.limelightvision.LLStatus;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 import java.util.List;
-
+import java.lang.Math;
 
 @TeleOp(name = "Limelight Color + Distance (Fixed)", group = "Sensor")
 public class LimelightSensorOp extends LinearOpMode {
@@ -62,13 +62,19 @@ public class LimelightSensorOp extends LinearOpMode {
                     if (targets != null && !targets.isEmpty()) {
                         int i = 0;
                         for (LLResultTypes.DetectorResult t : targets) {
-                            double area = t.getTargetArea();
+                            double horizontal_dist;
+                            // calculate front-back displacement to ball via ty for R1
+                            horizontal_dist = Math.tan((69.0/180.0) * Math.PI + Math.PI * (ty/180.0));
+                            horizontal_dist = 16.94 * horizontal_dist;
+                            telemetry.addData("Target " + i, "Dist: %.1f cm", horizontal_dist);
+
+                            /*double area = t.getTargetArea();
                             if (area > 0.001) {
-                                double distIn = K_AREA / Math.sqrt(area);
+
                                 telemetry.addData("Target " + i, "Dist: %.1f in", distIn);
                             } else {
                                 telemetry.addData("Target " + i, "Area too small");
-                            }
+                            }*/
                             i++;
                         }
                     } else {
