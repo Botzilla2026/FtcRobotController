@@ -12,7 +12,15 @@ import java.lang.Math;
 public class Lodo {
     private Limelight3A limelight;
     public double[] getBall(double[] roboCoords, HardwareMap hardwareMap){
-        // roboCoords is the length two array showing the coordinates on the odometry plane
+        /* roboCoords is the length thre array showing the coordinates on the odometry plane
+        and the angle theta from the x-axis clockwise
+
+        */
+
+        double x0 = roboCoords[0];
+        double y0 = roboCoords[1];
+        double theta = roboCoords[2];
+
         // returns the coordinates of the ball
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
@@ -20,6 +28,7 @@ public class Lodo {
         LLResult result = limelight.getLatestResult();
 
         if (result != null && result.isValid()) {
+            // calculate relative position
             double tx = result.getTx();
             double ty = result.getTy();
 
@@ -30,7 +39,12 @@ public class Lodo {
             double delta_y;
             delta_y = delta_x * Math.tan(-(tx / 180.0) * Math.PI);
 
-            return new double[]{roboCoords[0] + delta_x, roboCoords[1] + delta_y};
+            // adjust for angle
+
+            double xB = x0 + delta_x * Math.cos(theta) - delta_x * Math.sin(theta);
+            double yB = y0 + delta_y * Math.sin(theta) + delta_y * Math.cos(theta);
+
+            return new double[]{xB, yB};
         }
 
         return new double[]{};
