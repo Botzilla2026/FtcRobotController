@@ -23,6 +23,8 @@ public class Lodo {
 
         // returns the coordinates of the ball
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight.pipelineSwitch(0);     // whichever pipeline index detects the ball
+        limelight.start();
 
         // get camera input
         LLResult result = limelight.getLatestResult();
@@ -41,10 +43,11 @@ public class Lodo {
 
             // adjust for angle
 
-            double xB = x0 + delta_x * Math.cos(theta) - delta_x * Math.sin(theta);
-            double yB = y0 + delta_y * Math.sin(theta) + delta_y * Math.cos(theta);
+            double xB = x0 + delta_x * Math.cos(theta) - delta_y * Math.sin(theta);
+            double yB = y0 + delta_x * Math.sin(theta) + delta_y * Math.cos(theta);
 
-            return new double[]{xB, yB};
+            double heading = Math.atan2(delta_y, delta_x) + theta;
+            return new double[]{xB, yB, Math.toDegrees(heading)};
         }
 
         return new double[]{};

@@ -105,6 +105,10 @@ public class Tuning extends SelectableOpMode {
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
     }
 
+    public static void initPoseHistory() {
+        poseHistory = follower.getPoseHistory();
+    }
+
     @Override
     public void onLog(List<String> lines) {}
 
@@ -1793,4 +1797,6 @@ class Drawing {
     public static void sendPacket() {
         panelsField.update();
     }
+
+
 }

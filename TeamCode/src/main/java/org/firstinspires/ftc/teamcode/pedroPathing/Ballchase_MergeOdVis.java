@@ -88,6 +88,7 @@ public class Ballchase_MergeOdVis extends LinearOpMode {
             while (opModeIsActive()) {
                 follower.update();
                 LLResult result = limelight.getLatestResult();
+                telemetry.addData("result - ", result);
 
                 if (result != null && result.isValid()) {
 
@@ -95,7 +96,7 @@ public class Ballchase_MergeOdVis extends LinearOpMode {
                     LLResultTypes.DetectorResult ball = getBestBall(result);
 
                     if (ball != null) {
-                        double tx = 10.0; // horizontal angle
+                         double tx = 10.0; // horizontal angle
                         double ta = 5.0;     // % of frame filled
                         double conf = 80.0;   // confidence %
 
