@@ -16,8 +16,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.Tuning;
 
-@Autonomous(name = "GoToBall", group = "Autonomous")
-public class AutoMain extends LinearOpMode {
+@Autonomous(name = "FullAutomonous", group = "Autonomous")
+public class FullAutomonous extends LinearOpMode {
 
     // ------------------- Pedro Pathing / Vision -------------------
     Pose currPose;
@@ -52,7 +52,7 @@ public class AutoMain extends LinearOpMode {
             (OUTTAKE_TARGET_RPM * OUTTAKE_TICKS_PER_REV) / 60.0;
 
     // ------------------- Automatic state machine -------------------
-    // How close (odometry units, same units as your Pose x/y) counts as "arrived at ball".
+    // How close (cm — matches follower.getPose() now that Constants.java is cm-based) counts as "arrived at ball".
     // TUNE THIS to your field/robot geometry.
     private static final double ARRIVAL_RADIUS = 3.0;
 
@@ -118,6 +118,8 @@ public class AutoMain extends LinearOpMode {
                 ballPose = new Pose(ballpos[0], ballpos[1], Math.toRadians(ballpos[2]));
             }
 
+            double distCm = distance(currPose, ballPose);
+
             // ============= STATE MACHINE =============
             switch (state) {
 
@@ -136,10 +138,9 @@ public class AutoMain extends LinearOpMode {
                 case APPROACHING:
                     // Re-plan toward the freshest ball position once the current path finishes,
                     // same behavior as before, but only while we're still far away.
-                    double dist = distance(currPose, ballPose);
-
-                    if (dist <= ARRIVAL_RADIUS) {
-                        // Close enough: stop driving, stop intake, start collect sequence.
+                    if (distCm <= ARRIVAL_RADIUS) {
+                        // Close enough: stop driving immediately, stop intake, start collect sequence.
+                        follower.breakFollowing();
                         state = State.COLLECTING;
                         collectStartTime = System.currentTimeMillis();
                     } else if (ballPose != null && (follower.atParametricEnd() || !follower.isBusy())) {
@@ -181,7 +182,26 @@ public class AutoMain extends LinearOpMode {
             }
 
             telemetryM.addData("State", state);
+            telemetryM.addData("Ball Pose", ballPose != null ? ballPose.toString() : "none");
+            telemetryM.addData("Distance to Ball (cm)", distCm);
+            telemetryM.addData("Arrival Radius (cm)", ARRIVAL_RADIUS);
+            telemetryM.addData("Last ballpos length", ballpos != null ? ballpos.length : -1);
+            telemetryM.addData("Intake vel (actual)", intake_motor.getVelocity());
+            telemetryM.addData("Control vel (actual)", control_motor.getVelocity());
+            telemetryM.addData("Outtake vel (actual)", outtake_motor.getVelocity());
             telemetryM.update();
+
+            // Mirror to the standard Driver Station telemetry too, since Panels telemetry
+            // only shows up on the Panels web dashboard, not the DS phone/tablet.
+            telemetry.addData("State", state);
+            telemetry.addData("Ball Pose", ballPose != null ? ballPose.toString() : "none");
+            telemetry.addData("Distance to Ball (cm)", distCm);
+            telemetry.addData("Arrival Radius (cm)", ARRIVAL_RADIUS);
+            telemetry.addData("Last ballpos length", ballpos != null ? ballpos.length : -1);
+            telemetry.addData("Intake vel (actual)", intake_motor.getVelocity());
+            telemetry.addData("Control vel (actual)", control_motor.getVelocity());
+            telemetry.addData("Outtake vel (actual)", outtake_motor.getVelocity());
+            telemetry.update();
         }
 
         // Stop everything on exit
