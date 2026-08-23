@@ -34,7 +34,6 @@ public class AutoMain extends LinearOpMode {
         Tuning.initPoseHistory(); // lets drawCurrentAndHistory() work from this package
 
         waitForStart();
-
         while (opModeIsActive()) {
             follower.update();
             drawCurrentAndHistory();

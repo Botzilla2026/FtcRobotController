@@ -13,7 +13,6 @@ public class IntakeAuto {
     // goBILDA 5203 series (19.2:1) — 384.5 ticks per output revolution
     private static final double TICKS_PER_REV = 384.5;
     private boolean intakeOn = false;
-
     public IntakeAuto(HardwareMap hardwareMap) {
         intake_motor = hardwareMap.get(DcMotorEx.class, "intake_motor");
 
