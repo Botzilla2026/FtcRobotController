@@ -1,0 +1,9 @@
+[versions]
+gradle = "9.3.1"
+foojay-resolver = "1.0.0"
+
+[libraries]
+gradle = { group = "com.android.tools.build", name = "gradle", version.ref = "gradle" }
+
+[plugins]
+foojay-resolver = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay-resolver" }

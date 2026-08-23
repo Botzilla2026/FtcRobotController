@@ -1,0 +1,218 @@
+package org.firstinspires.ftc.teamcode;
+
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.util.Range;
+
+/**
+ * Full Robot TeleOp — Mecanum Drive (no heading/rotation) + Intake + Control + Outtake
+ *
+ * Drive Control:
+ *   Right Joystick -> Forward/Back + Strafe only (no rotation)
+ *
+ * Mechanism Control:
+ *   X -> Intake toggle (435 RPM on/off)
+ *   Y -> Control motor cycle (Off -> 5 RPM -> 1000 RPM -> Off...)
+ *   B -> Outtake toggle (5500 RPM on/off, reversed direction)
+ */
+@TeleOp(name = "Maybe" + "Robot TeleOp", group = "TeleOp")
+public class ForWheelOpMode extends LinearOpMode {
+
+    // ------------------- Drivetrain -------------------
+    private DcMotor leftFrontMotor;
+    private DcMotor rightFrontMotor;
+    private DcMotor leftBackMotor;
+    private DcMotor rightBackMotor;
+
+    private static final double MAX_SPEED = 1.0;
+    private static final double DEADZONE  = 0.05;
+
+    // ------------------- Mechanisms -------------------
+    private DcMotorEx intake_motor;
+    private DcMotorEx control_motor;
+    private DcMotorEx outtake_motor;
+
+    // Intake: goBILDA 5203 19.2:1, 435 RPM target
+    private static final double INTAKE_TICKS_PER_REV = 384.5;
+    private static final double INTAKE_TARGET_RPM = 435;
+    private static final double INTAKE_TICKS_PER_SEC =
+            (INTAKE_TARGET_RPM * INTAKE_TICKS_PER_REV) / 60.0;
+    private boolean intakeOn = false;
+    private boolean xPressedLast = false;
+
+    // Control: goBILDA 5203 19.2:1, 3-stage cycle (0 -> 5 RPM -> 1000 RPM -> 0)
+    private static final double CONTROL_TICKS_PER_REV = 384.5;
+    private static final double CONTROL_RPM_STAGE_1 = 5;
+    private static final double CONTROL_RPM_STAGE_2 = 1000;
+    private static final double CONTROL_TICKS_PER_SEC_STAGE_1 =
+            (CONTROL_RPM_STAGE_1 * CONTROL_TICKS_PER_REV) / 60.0;
+    private static final double CONTROL_TICKS_PER_SEC_STAGE_2 =
+            (CONTROL_RPM_STAGE_2 * CONTROL_TICKS_PER_REV) / 60.0;
+    private int controlStage = 0; // 0 = off, 1 = 5 RPM, 2 = 1000 RPM
+    private boolean yPressedLast = false;
+
+    // Outtake: goBILDA 5203 Yellow Jacket (no gearbox, 6000 RPM), target 5500 RPM
+    private static final double OUTTAKE_TICKS_PER_REV = 28.0;
+    private static final double OUTTAKE_TARGET_RPM = 5500;
+    private static final double OUTTAKE_TICKS_PER_SEC =
+            (OUTTAKE_TARGET_RPM * OUTTAKE_TICKS_PER_REV) / 60.0;
+    private boolean outtakeOn = false;
+    private boolean bPressedLast = false;
+
+    @Override
+    public void runOpMode() {
+
+        // ---------------- Hardware Map: Drivetrain ----------------
+        leftFrontMotor  = hardwareMap.get(DcMotor.class, "left_front_motor");
+        rightFrontMotor = hardwareMap.get(DcMotor.class, "right_front_motor");
+        leftBackMotor   = hardwareMap.get(DcMotor.class, "left_back_motor");
+        rightBackMotor  = hardwareMap.get(DcMotor.class, "right_back_motor");
+
+        leftFrontMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftBackMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightFrontMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightBackMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+
+        leftFrontMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightFrontMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leftBackMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightBackMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        leftFrontMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightFrontMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        leftBackMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightBackMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        // ---------------- Hardware Map: Mechanisms ----------------
+        intake_motor  = hardwareMap.get(DcMotorEx.class, "intake_motor");
+        control_motor = hardwareMap.get(DcMotorEx.class, "control_motor");
+        outtake_motor = hardwareMap.get(DcMotorEx.class, "outtake_motor");
+
+        intake_motor.setDirection(DcMotor.Direction.FORWARD);
+        control_motor.setDirection(DcMotor.Direction.FORWARD);
+        outtake_motor.setDirection(DcMotor.Direction.REVERSE);
+
+        intake_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        control_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        outtake_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        intake_motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        control_motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        outtake_motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        intake_motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        control_motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        outtake_motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        telemetry.addData("Status", "Initialized - waiting for Start");
+        telemetry.update();
+
+        waitForStart();
+
+        while (opModeIsActive()) {
+
+            // ============= DRIVETRAIN (no rotation) =============
+            double rawDrive  = -gamepad1.right_stick_y;
+            double rawStrafe =  gamepad1.right_stick_x;
+
+            double drive, strafe;
+
+            if (Math.abs(rawDrive) < DEADZONE) {
+                drive = 0.0;
+            } else {
+                drive = (rawDrive - Math.signum(rawDrive) * DEADZONE) / (1.0 - DEADZONE);
+            }
+
+            if (Math.abs(rawStrafe) < DEADZONE) {
+                strafe = 0.0;
+            } else {
+                strafe = (rawStrafe - Math.signum(rawStrafe) * DEADZONE) / (1.0 - DEADZONE);
+            }
+
+            double leftFrontPower  = drive + strafe;
+            double rightFrontPower = drive - strafe;
+            double leftBackPower   = drive - strafe;
+            double rightBackPower  = drive + strafe;
+
+            double maxPower = Math.max(
+                    Math.max(Math.abs(leftFrontPower),  Math.abs(rightFrontPower)),
+                    Math.max(Math.abs(leftBackPower),   Math.abs(rightBackPower))
+            );
+            if (maxPower > MAX_SPEED) {
+                leftFrontPower  /= maxPower;
+                rightFrontPower /= maxPower;
+                leftBackPower   /= maxPower;
+                rightBackPower  /= maxPower;
+            }
+
+            leftFrontPower  = Range.clip(leftFrontPower,  -MAX_SPEED, MAX_SPEED);
+            rightFrontPower = Range.clip(rightFrontPower, -MAX_SPEED, MAX_SPEED);
+            leftBackPower   = Range.clip(leftBackPower,   -MAX_SPEED, MAX_SPEED);
+            rightBackPower  = Range.clip(rightBackPower,  -MAX_SPEED, MAX_SPEED);
+
+            leftFrontMotor.setPower(leftFrontPower);
+            rightFrontMotor.setPower(rightFrontPower);
+            leftBackMotor.setPower(leftBackPower);
+            rightBackMotor.setPower(rightBackPower);
+
+            // ============= INTAKE (X toggle) =============
+            boolean xPressed = gamepad1.x;
+            if (xPressed && !xPressedLast) {
+                intakeOn = !intakeOn;
+            }
+            xPressedLast = xPressed;
+            intake_motor.setVelocity(intakeOn ? INTAKE_TICKS_PER_SEC : 0);
+
+            // ============= CONTROL (Y cycle) =============
+            boolean yPressed = gamepad1.y;
+            if (yPressed && !yPressedLast) {
+                controlStage = (controlStage + 1) % 3;
+            }
+            yPressedLast = yPressed;
+
+            switch (controlStage) {
+                case 1:
+                    control_motor.setVelocity(CONTROL_TICKS_PER_SEC_STAGE_1);
+                    break;
+                case 2:
+                    control_motor.setVelocity(CONTROL_TICKS_PER_SEC_STAGE_2);
+                    break;
+                default:
+                    control_motor.setVelocity(0);
+                    break;
+            }
+
+            // ============= OUTTAKE (B toggle) =============
+            boolean bPressed = gamepad1.b;
+            if (bPressed && !bPressedLast) {
+                outtakeOn = !outtakeOn;
+            }
+            bPressedLast = bPressed;
+            outtake_motor.setVelocity(outtakeOn ? OUTTAKE_TICKS_PER_SEC : 0);
+
+            // ============= TELEMETRY =============
+            telemetry.addData("-- Drivetrain -----------", "");
+            telemetry.addData("Left  Front", "%.2f", leftFrontPower);
+            telemetry.addData("Right Front", "%.2f", rightFrontPower);
+            telemetry.addData("Left  Back",  "%.2f", leftBackPower);
+            telemetry.addData("Right Back",  "%.2f", rightBackPower);
+            telemetry.addData("-- Mechanisms -----------", "");
+            telemetry.addData("Intake On", intakeOn);
+            telemetry.addData("Control Stage", controlStage);
+            telemetry.addData("Outtake On", outtakeOn);
+            telemetry.update();
+        }
+
+        // Stop everything on exit
+        leftFrontMotor.setPower(0);
+        rightFrontMotor.setPower(0);
+        leftBackMotor.setPower(0);
+        rightBackMotor.setPower(0);
+        intake_motor.setVelocity(0);
+        control_motor.setVelocity(0);
+        outtake_motor.setVelocity(0);
+    }
+}
