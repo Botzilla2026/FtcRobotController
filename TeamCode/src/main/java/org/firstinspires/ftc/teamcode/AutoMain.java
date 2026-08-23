@@ -59,7 +59,6 @@ public class AutoMain extends LinearOpMode {
                     intaker.takein(435);
                     follower.followPath(triangle, true);
                     intaker.stoptake();
-
                 }
             }
 

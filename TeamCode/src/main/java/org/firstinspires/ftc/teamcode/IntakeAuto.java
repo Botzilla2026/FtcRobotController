@@ -27,7 +27,6 @@ public class IntakeAuto {
         double TARGET_TICKS_PER_SEC = (TARGET_RPM * TICKS_PER_REV) / 60.0;
 
         intake_motor.setVelocity(TARGET_TICKS_PER_SEC);
-
     }
     public void stoptake(){
         intake_motor.setVelocity(0);
