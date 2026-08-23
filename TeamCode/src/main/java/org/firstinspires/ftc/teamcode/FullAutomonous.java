@@ -16,14 +16,13 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.Tuning;
 
-@Autonomous(name = "AutoMain", group = "Autonomous")
-public class AutoMain extends LinearOpMode {
+@Autonomous(name = "FullAutomonous", group = "Autonomous")
+public class FullAutomonous extends LinearOpMode {
 
     // ------------------- Pedro Pathing / Vision -------------------
     Pose currPose;
     Pose ballPose;
     Lodo lodo = new Lodo();
-    IntakeAuto intaker = new IntakeAuto(hardwareMap);
     double[] ballpos;
 
     // ------------------- Mechanisms (ported from TeleOp) -------------------
@@ -53,7 +52,7 @@ public class AutoMain extends LinearOpMode {
             (OUTTAKE_TARGET_RPM * OUTTAKE_TICKS_PER_REV) / 60.0;
 
     // ------------------- Automatic state machine -------------------
-    // How close (odometry units, same units as your Pose x/y) counts as "arrived at ball".
+    // How close (cm — matches follower.getPose() now that Constants.java is cm-based) counts as "arrived at ball".
     // TUNE THIS to your field/robot geometry.
     private static final double ARRIVAL_RADIUS = 3.0;
 
@@ -79,8 +78,6 @@ public class AutoMain extends LinearOpMode {
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0, 0, 0)); // set this to your real starting pose
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
-        telemetry.setMsTransmissionInterval(50);
-
         Tuning.initPoseHistory(); // lets drawCurrentAndHistory() work from this package
 
         // ---------------- Hardware Map: Mechanisms ----------------
@@ -119,17 +116,65 @@ public class AutoMain extends LinearOpMode {
 
             if (ballpos != null && ballpos.length != 0) {
                 ballPose = new Pose(ballpos[0], ballpos[1], Math.toRadians(ballpos[2]));
-                telemetry.addData("Ball Position:", "(x,y): (%.2f,%.2f)",ballpos[0], ballpos[1]);
-                telemetry.update();
-                if (follower.atParametricEnd() || !follower.isBusy()) {
-                    PathChain triangle = follower.pathBuilder()
-                            .addPath(new BezierLine(currPose, ballPose))
-                            .setLinearHeadingInterpolation(currPose.getHeading(), ballPose.getHeading())
-                            .build();
+            }
 
-                    intaker.takein(435);
-                    follower.followPath(triangle, true);
-                    intaker.stoptake();
+            double distCm = distance(currPose, ballPose);
+
+            // ============= STATE MACHINE =============
+            switch (state) {
+
+                case SEARCHING:
+                    if (ballPose != null) {
+                        // Found a ball: head toward it and start intaking.
+                        PathChain toBall = follower.pathBuilder()
+                                .addPath(new BezierLine(currPose, ballPose))
+                                .setLinearHeadingInterpolation(currPose.getHeading(), ballPose.getHeading())
+                                .build();
+                        follower.followPath(toBall, true);
+                        state = State.APPROACHING;
+                    }
+                    break;
+
+                case APPROACHING:
+                    // Re-plan toward the freshest ball position once the current path finishes,
+                    // same behavior as before, but only while we're still far away.
+                    if (distCm <= ARRIVAL_RADIUS) {
+                        // Close enough: stop driving immediately, stop intake, start collect sequence.
+                        follower.breakFollowing();
+                        state = State.COLLECTING;
+                        collectStartTime = System.currentTimeMillis();
+                    } else if (ballPose != null && (follower.atParametricEnd() || !follower.isBusy())) {
+                        PathChain triangle = follower.pathBuilder()
+                                .addPath(new BezierLine(currPose, ballPose))
+                                .setLinearHeadingInterpolation(currPose.getHeading(), ballPose.getHeading())
+                                .build();
+                        follower.followPath(triangle, true);
+                    }
+                    break;
+
+                case COLLECTING:
+                    if (System.currentTimeMillis() - collectStartTime >= COLLECT_DURATION_MS) {
+                        // Done collecting this ball; go back to searching for the next one.
+                        ballPose = null;
+                        state = State.SEARCHING;
+                    }
+                    break;
+            }
+
+            // ============= MECHANISM OUTPUT (driven by state) =============
+            boolean intakeOn   = (state == State.APPROACHING);
+            intake_motor.setVelocity(intakeOn ? INTAKE_TICKS_PER_SEC : 0);
+
+            if (state == State.COLLECTING) {
+                long elapsed = System.currentTimeMillis() - collectStartTime;
+                if (elapsed < CONTROL_STAGE_1_DURATION_MS) {
+                    // Stage 1: slow settle, outtake not running yet.
+                    control_motor.setVelocity(CONTROL_TICKS_PER_SEC_STAGE_1);
+                    outtake_motor.setVelocity(0);
+                } else {
+                    // Stage 2: fast transfer, outtake spun up to score.
+                    control_motor.setVelocity(CONTROL_TICKS_PER_SEC_STAGE_2);
+                    outtake_motor.setVelocity(OUTTAKE_TICKS_PER_SEC);
                 }
             } else {
                 control_motor.setVelocity(0);
@@ -137,7 +182,26 @@ public class AutoMain extends LinearOpMode {
             }
 
             telemetryM.addData("State", state);
+            telemetryM.addData("Ball Pose", ballPose != null ? ballPose.toString() : "none");
+            telemetryM.addData("Distance to Ball (cm)", distCm);
+            telemetryM.addData("Arrival Radius (cm)", ARRIVAL_RADIUS);
+            telemetryM.addData("Last ballpos length", ballpos != null ? ballpos.length : -1);
+            telemetryM.addData("Intake vel (actual)", intake_motor.getVelocity());
+            telemetryM.addData("Control vel (actual)", control_motor.getVelocity());
+            telemetryM.addData("Outtake vel (actual)", outtake_motor.getVelocity());
             telemetryM.update();
+
+            // Mirror to the standard Driver Station telemetry too, since Panels telemetry
+            // only shows up on the Panels web dashboard, not the DS phone/tablet.
+            telemetry.addData("State", state);
+            telemetry.addData("Ball Pose", ballPose != null ? ballPose.toString() : "none");
+            telemetry.addData("Distance to Ball (cm)", distCm);
+            telemetry.addData("Arrival Radius (cm)", ARRIVAL_RADIUS);
+            telemetry.addData("Last ballpos length", ballpos != null ? ballpos.length : -1);
+            telemetry.addData("Intake vel (actual)", intake_motor.getVelocity());
+            telemetry.addData("Control vel (actual)", control_motor.getVelocity());
+            telemetry.addData("Outtake vel (actual)", outtake_motor.getVelocity());
+            telemetry.update();
         }
 
         // Stop everything on exit
