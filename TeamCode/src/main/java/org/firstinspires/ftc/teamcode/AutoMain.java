@@ -144,11 +144,4 @@ public class AutoMain extends LinearOpMode {
         control_motor.setVelocity(0);
         outtake_motor.setVelocity(0);
     }
-
-    private double distance(Pose a, Pose b) {
-        if (a == null || b == null) return Double.MAX_VALUE;
-        double dx = a.getX() - b.getX();
-        double dy = a.getY() - b.getY();
-        return Math.sqrt(dx * dx + dy * dy);
-    }
 }
