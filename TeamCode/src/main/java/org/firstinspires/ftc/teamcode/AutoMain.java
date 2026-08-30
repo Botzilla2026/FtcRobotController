@@ -23,45 +23,6 @@ public class AutoMain extends LinearOpMode {
     Pose currPose;
     Pose ballPose;
     Lodo lodo = new Lodo();
-    IntakeAuto intaker = new IntakeAuto(hardwareMap);
-    double[] ballpos;
-
-    // ------------------- Mechanisms (ported from TeleOp) -------------------
-    private DcMotorEx intake_motor;
-    private DcMotorEx control_motor;
-    private DcMotorEx outtake_motor;
-
-    // Intake: goBILDA 5203 19.2:1, 435 RPM target
-    private static final double INTAKE_TICKS_PER_REV = 384.5;
-    private static final double INTAKE_TARGET_RPM = 435;
-    private static final double INTAKE_TICKS_PER_SEC =
-            (INTAKE_TARGET_RPM * INTAKE_TICKS_PER_REV) / 60.0;
-
-    // Control: goBILDA 5203 19.2:1
-    private static final double CONTROL_TICKS_PER_REV = 384.5;
-    private static final double CONTROL_RPM_STAGE_1 = 5;
-    private static final double CONTROL_RPM_STAGE_2 = 1000;
-    private static final double CONTROL_TICKS_PER_SEC_STAGE_1 =
-            (CONTROL_RPM_STAGE_1 * CONTROL_TICKS_PER_REV) / 60.0;
-    private static final double CONTROL_TICKS_PER_SEC_STAGE_2 =
-            (CONTROL_RPM_STAGE_2 * CONTROL_TICKS_PER_REV) / 60.0;
-
-    // Outtake: goBILDA 5203 Yellow Jacket (no gearbox, 6000 RPM), target 5500 RPM
-    private static final double OUTTAKE_TICKS_PER_REV = 28.0;
-    private static final double OUTTAKE_TARGET_RPM = 5500;
-    private static final double OUTTAKE_TICKS_PER_SEC =
-            (OUTTAKE_TARGET_RPM * OUTTAKE_TICKS_PER_REV) / 60.0;
-
-    // ------------------- Automatic state machine -------------------
-    // How close (odometry units, same units as your Pose x/y) counts as "arrived at ball".
-    // TUNE THIS to your field/robot geometry.
-    private static final double ARRIVAL_RADIUS = 3.0;
-
-    // How long control_motor spends at each stage during collection, in ms.
-    // TUNE THESE to how long the 5 RPM "settle" stage and 1000 RPM "transfer" stage actually need.
-    private static final long CONTROL_STAGE_1_DURATION_MS = 500;
-    private static final long CONTROL_STAGE_2_DURATION_MS = 1000;
-    private static final long COLLECT_DURATION_MS = CONTROL_STAGE_1_DURATION_MS + CONTROL_STAGE_2_DURATION_MS;
 
     private enum State {
         SEARCHING,   // no ball detected yet, everything idle
@@ -74,6 +35,47 @@ public class AutoMain extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        IntakeAuto intaker = new IntakeAuto(hardwareMap);
+        double[] ballpos;
+
+        // ------------------- Mechanisms (ported from TeleOp) -------------------
+        DcMotorEx intake_motor;
+        DcMotorEx control_motor;
+        DcMotorEx outtake_motor;
+
+        // Intake: goBILDA 5203 19.2:1, 435 RPM target
+        final double INTAKE_TICKS_PER_REV = 384.5;
+        final double INTAKE_TARGET_RPM = 435;
+        final double INTAKE_TICKS_PER_SEC =
+                (INTAKE_TARGET_RPM * INTAKE_TICKS_PER_REV) / 60.0;
+
+        // Control: goBILDA 5203 19.2:1
+        final double CONTROL_TICKS_PER_REV = 384.5;
+        final double CONTROL_RPM_STAGE_1 = 5;
+        final double CONTROL_RPM_STAGE_2 = 1000;
+        final double CONTROL_TICKS_PER_SEC_STAGE_1 =
+                (CONTROL_RPM_STAGE_1 * CONTROL_TICKS_PER_REV) / 60.0;
+        final double CONTROL_TICKS_PER_SEC_STAGE_2 =
+                (CONTROL_RPM_STAGE_2 * CONTROL_TICKS_PER_REV) / 60.0;
+
+        // Outtake: goBILDA 5203 Yellow Jacket (no gearbox, 6000 RPM), target 5500 RPM
+        final double OUTTAKE_TICKS_PER_REV = 28.0;
+        final double OUTTAKE_TARGET_RPM = 5500;
+        final double OUTTAKE_TICKS_PER_SEC =
+                (OUTTAKE_TARGET_RPM * OUTTAKE_TICKS_PER_REV) / 60.0;
+
+        // ------------------- Automatic state machine -------------------
+        // How close (odometry units, same units as your Pose x/y) counts as "arrived at ball".
+        // TUNE THIS to your field/robot geometry.
+        final double ARRIVAL_RADIUS = 3.0;
+
+        // How long control_motor spends at each stage during collection, in ms.
+        // TUNE THESE to how long the 5 RPM "settle" stage and 1000 RPM "transfer" stage actually need.
+        final long CONTROL_STAGE_1_DURATION_MS = 500;
+        final long CONTROL_STAGE_2_DURATION_MS = 1000;
+        final long COLLECT_DURATION_MS = CONTROL_STAGE_1_DURATION_MS + CONTROL_STAGE_2_DURATION_MS;
+
+
         // follower/telemetryM/poseHistory are only assigned inside Tuning.onSelect(),
         // which never runs when GoToBall is launched directly. Build everything here.
         follower = Constants.createFollower(hardwareMap);
