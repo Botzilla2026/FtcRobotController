@@ -1,33 +1,24 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class IntakeAuto {
-    private DcMotorEx intake_motor;
+    private DcMotor intake_motor;
 
-    // goBILDA 5203 series (19.2:1) — 384.5 ticks per output revolution
-    private static final double TICKS_PER_REV = 384.5;
-    private boolean intakeOn = false;
+    // Full power = the motor's max free-run speed.
+    // For a goBILDA 5203 Yellow Jacket (13.7:1 ratio), that's ~435 RPM at 12V.
+    private static final double INTAKE_POWER = 1.0;
+
     public IntakeAuto(HardwareMap hardwareMap) {
-        intake_motor = hardwareMap.get(DcMotorEx.class, "intake_motor");
-
-        intake_motor.setDirection(DcMotor.Direction.FORWARD); // spins clockwise
-        intake_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        intake_motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        intake_motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        intake_motor = hardwareMap.get(DcMotor.class, "intake_motor");
     }
 
-    public void takein(double TARGET_RPM) {
-        double TARGET_TICKS_PER_SEC = (TARGET_RPM * TICKS_PER_REV) / 60.0;
-
-        intake_motor.setVelocity(TARGET_TICKS_PER_SEC);
+    public void takeIn(int rpm) {
+        intake_motor.setPower(INTAKE_POWER);
     }
-    public void stoptake(){
-        intake_motor.setVelocity(0);
+
+    public void stopTake() {
+        intake_motor.setPower(0);
     }
 }

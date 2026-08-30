@@ -126,9 +126,9 @@ public class AutoMain extends LinearOpMode {
                             .setLinearHeadingInterpolation(currPose.getHeading(), ballPose.getHeading())
                             .build();
 
-                    intaker.takein(435);
+                    intaker.takeIn(435);
                     follower.followPath(triangle, true);
-                    intaker.stoptake();
+                    intaker.stopTake();
                 }
             } else {
                 control_motor.setVelocity(0);
