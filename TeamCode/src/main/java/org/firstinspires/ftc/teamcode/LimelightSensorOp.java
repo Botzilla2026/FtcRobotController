@@ -15,6 +15,7 @@ public class LimelightSensorOp extends LinearOpMode {
 
     private static final double K_AREA = 24.0;
 
+    private Lodo lodo;
     private Limelight3A limelight;
 
     @Override
@@ -54,7 +55,7 @@ public class LimelightSensorOp extends LinearOpMode {
                     double ta = result.getTa();
 
                     telemetry.addLine("--- Main Target ---");
-                    telemetry.addData("Offset", "X: %.2f, Y: %.2f", tx, ty);
+                    telemetry.addData("Offset", "tX: %.2f, tY: %.2f", tx, ty);
                     telemetry.addData("Area (%)", "%.2f", ta);
 
                     List<LLResultTypes.DetectorResult> targets = result.getDetectorResults();
@@ -62,11 +63,15 @@ public class LimelightSensorOp extends LinearOpMode {
                     if (targets != null && !targets.isEmpty()) {
                         int i = 0;
                         for (LLResultTypes.DetectorResult t : targets) {
-                            double horizontal_dist;
+                            double delta_x;
                             // calculate front-back displacement to ball via ty for R1
-                            horizontal_dist = Math.tan((69.0/180.0) * Math.PI + Math.PI * (ty/180.0));
-                            horizontal_dist = 16.94 * horizontal_dist;
-                            telemetry.addData("Target " + i, "Dist: %.1f cm", horizontal_dist);
+                            delta_x = Math.tan((69.0/180.0) * Math.PI + Math.PI * (ty/180.0));
+                            delta_x = 16.94 * delta_x;
+
+                            double delta_y; // cm
+                            delta_y = delta_x * Math.tan(-(tx / 180.0) * Math.PI);
+                            
+                            telemetry.addData("Ball Coords " + i, "deltaX: %.2f cm, deltaY: %.2f cm", delta_x,delta_y);
 
                             /*double area = t.getTargetArea();
                             if (area > 0.001) {
