@@ -71,7 +71,7 @@ public class Lodo {
             // Per diagram: angle at camera = (69 - ty) degrees, between vertical
             // side h (adjacent) and the hypotenuse; delta_x (opposite) is the
             // ground distance. tan(angle) = delta_x / h  =>  delta_x = h * tan(angle)
-            double angleRad = ((69.0 - ty) / 180.0) * Math.PI;
+            double angleRad = ((69.0 + ty) / 180.0) * Math.PI;
             double delta_x = HEIGHT * Math.tan(angleRad);
 
             double delta_y; // cm
