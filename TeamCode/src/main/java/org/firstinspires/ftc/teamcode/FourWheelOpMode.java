@@ -1,28 +1,24 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.Range;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 /**
- * Full Robot TeleOp — Mecanum Drive + Intake + Control + Outtake
+ * Full Robot TeleOp — Mecanum Drive (no heading/rotation) + Intake + Control + Outtake
  *
  * Drive Control:
- *   Right Joystick -> Forward/Back + Strafe
- *   Left  Joystick -> Points in the direction the robot should face (absolute heading control)
+ *   Right Joystick -> Forward/Back + Strafe only (no rotation)
  *
  * Mechanism Control:
  *   X -> Intake toggle (435 RPM on/off)
- *   Y -> Control motor toggle (30 RPM <-> 400 RPM)
+ *   Y -> Control motor cycle (Off -> 5 RPM -> 1000 RPM -> Off...)
  *   B -> Outtake toggle (5500 RPM on/off, reversed direction)
  */
-@TeleOp(name = "Full Robot TeleOp", group = "TeleOp")
+@TeleOp(name = "Maybe" + "Robot TeleOp", group = "TeleOp")
 public class FourWheelOpMode extends LinearOpMode {
 
     // ------------------- Drivetrain -------------------
@@ -33,12 +29,6 @@ public class FourWheelOpMode extends LinearOpMode {
 
     private static final double MAX_SPEED = 1.0;
     private static final double DEADZONE  = 0.05;
-
-    // ------------------- Heading control (left stick) -------------------
-    private IMU imu;
-    private static final double HEADING_KP = 0.8; // tune: proportional gain, target-current error -> rotate power
-    private static final double HEADING_STICK_DEADZONE = 0.15; // ignore small left-stick nudges
-    private double targetHeadingRad = 0.0; // holds last commanded heading when stick is released
 
     // ------------------- Mechanisms -------------------
     private DcMotorEx intake_motor;
@@ -53,15 +43,15 @@ public class FourWheelOpMode extends LinearOpMode {
     private boolean intakeOn = false;
     private boolean xPressedLast = false;
 
-    // Control: goBILDA 5203 19.2:1, toggles between 30 RPM and 400 RPM
+    // Control: goBILDA 5203 19.2:1, 3-stage cycle (0 -> 5 RPM -> 1000 RPM -> 0)
     private static final double CONTROL_TICKS_PER_REV = 384.5;
-    private static final double CONTROL_RPM_LOW  = 30;
-    private static final double CONTROL_RPM_HIGH = 400;
-    private static final double CONTROL_TICKS_PER_SEC_LOW =
-            (CONTROL_RPM_LOW * CONTROL_TICKS_PER_REV) / 60.0;
-    private static final double CONTROL_TICKS_PER_SEC_HIGH =
-            (CONTROL_RPM_HIGH * CONTROL_TICKS_PER_REV) / 60.0;
-    private boolean controlAtHigh = false; // false = 30 RPM, true = 400 RPM
+    private static final double CONTROL_RPM_STAGE_1 = 5;
+    private static final double CONTROL_RPM_STAGE_2 = 1000;
+    private static final double CONTROL_TICKS_PER_SEC_STAGE_1 =
+            (CONTROL_RPM_STAGE_1 * CONTROL_TICKS_PER_REV) / 60.0;
+    private static final double CONTROL_TICKS_PER_SEC_STAGE_2 =
+            (CONTROL_RPM_STAGE_2 * CONTROL_TICKS_PER_REV) / 60.0;
+    private int controlStage = 0; // 0 = off, 1 = 5 RPM, 2 = 1000 RPM
     private boolean yPressedLast = false;
 
     // Outtake: goBILDA 5203 Yellow Jacket (no gearbox, 6000 RPM), target 5500 RPM
@@ -96,19 +86,6 @@ public class FourWheelOpMode extends LinearOpMode {
         leftBackMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightBackMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        // ---------------- Hardware Map: IMU ----------------
-        // Adjust logoFacingDirection / usbFacingDirection to match how your Control/Expansion Hub
-        // is physically mounted on the robot.
-        imu = hardwareMap.get(IMU.class, "imu");
-        IMU.Parameters imuParameters = new IMU.Parameters(
-                new RevHubOrientationOnRobot(
-                        RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                        RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
-                )
-        );
-        imu.initialize(imuParameters);
-        imu.resetYaw();
-
         // ---------------- Hardware Map: Mechanisms ----------------
         intake_motor  = hardwareMap.get(DcMotorEx.class, "intake_motor");
         control_motor = hardwareMap.get(DcMotorEx.class, "control_motor");
@@ -137,7 +114,7 @@ public class FourWheelOpMode extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-            // ============= DRIVETRAIN: translation (right stick) =============
+            // ============= DRIVETRAIN (no rotation) =============
             double rawDrive  = -gamepad1.right_stick_y;
             double rawStrafe =  gamepad1.right_stick_x;
 
@@ -155,29 +132,10 @@ public class FourWheelOpMode extends LinearOpMode {
                 strafe = (rawStrafe - Math.signum(rawStrafe) * DEADZONE) / (1.0 - DEADZONE);
             }
 
-            // ============= DRIVETRAIN: heading (left stick) =============
-            double stickX = gamepad1.left_stick_x;
-            double stickY = -gamepad1.left_stick_y; // up on stick = forward
-            double stickMagnitude = Math.hypot(stickX, stickY);
-
-            if (stickMagnitude > HEADING_STICK_DEADZONE) {
-                // 0 rad = forward, positive = clockwise (to the right)
-                targetHeadingRad = Math.atan2(stickX, stickY);
-            }
-            // else: keep holding the last commanded heading
-
-            double currentHeadingRad = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
-
-            double headingError = targetHeadingRad - currentHeadingRad;
-            while (headingError > Math.PI)  headingError -= 2 * Math.PI;
-            while (headingError < -Math.PI) headingError += 2 * Math.PI;
-
-            double rotate = Range.clip(headingError * HEADING_KP, -MAX_SPEED, MAX_SPEED);
-
-            double leftFrontPower  = drive + strafe + rotate;
-            double rightFrontPower = drive - strafe - rotate;
-            double leftBackPower   = drive - strafe + rotate;
-            double rightBackPower  = drive + strafe - rotate;
+            double leftFrontPower  = drive + strafe;
+            double rightFrontPower = drive - strafe;
+            double leftBackPower   = drive - strafe;
+            double rightBackPower  = drive + strafe;
 
             double maxPower = Math.max(
                     Math.max(Math.abs(leftFrontPower),  Math.abs(rightFrontPower)),
@@ -208,13 +166,24 @@ public class FourWheelOpMode extends LinearOpMode {
             xPressedLast = xPressed;
             intake_motor.setVelocity(intakeOn ? INTAKE_TICKS_PER_SEC : 0);
 
-            // ============= CONTROL (Y toggle: 30 RPM <-> 400 RPM) =============
+            // ============= CONTROL (Y cycle) =============
             boolean yPressed = gamepad1.y;
             if (yPressed && !yPressedLast) {
-                controlAtHigh = !controlAtHigh;
+                controlStage = (controlStage + 1) % 3;
             }
             yPressedLast = yPressed;
-            control_motor.setVelocity(controlAtHigh ? CONTROL_TICKS_PER_SEC_HIGH : CONTROL_TICKS_PER_SEC_LOW);
+
+            switch (controlStage) {
+                case 1:
+                    control_motor.setVelocity(CONTROL_TICKS_PER_SEC_STAGE_1);
+                    break;
+                case 2:
+                    control_motor.setVelocity(CONTROL_TICKS_PER_SEC_STAGE_2);
+                    break;
+                default:
+                    control_motor.setVelocity(0);
+                    break;
+            }
 
             // ============= OUTTAKE (B toggle) =============
             boolean bPressed = gamepad1.b;
@@ -230,11 +199,9 @@ public class FourWheelOpMode extends LinearOpMode {
             telemetry.addData("Right Front", "%.2f", rightFrontPower);
             telemetry.addData("Left  Back",  "%.2f", leftBackPower);
             telemetry.addData("Right Back",  "%.2f", rightBackPower);
-            telemetry.addData("Target Heading (deg)", "%.1f", Math.toDegrees(targetHeadingRad));
-            telemetry.addData("Current Heading (deg)", "%.1f", Math.toDegrees(currentHeadingRad));
             telemetry.addData("-- Mechanisms -----------", "");
             telemetry.addData("Intake On", intakeOn);
-            telemetry.addData("Control Motor", controlAtHigh ? "400 RPM" : "30 RPM");
+            telemetry.addData("Control Stage", controlStage);
             telemetry.addData("Outtake On", outtakeOn);
             telemetry.update();
         }
