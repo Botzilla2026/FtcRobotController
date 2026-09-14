@@ -30,6 +30,7 @@ public class AutoMain extends LinearOpMode {
         COLLECTING   // arrived at ball, running control transfer + outtake for a fixed duration
     }
 
+
     private State state = State.SEARCHING;
     private long collectStartTime = 0;
 
@@ -123,10 +124,27 @@ public class AutoMain extends LinearOpMode {
                 telemetry.addData("Current Position:", "(x,y,h): (%.2f,%.2f,%.2f)", currPose.getX(), currPose.getY(), Math.toDegrees(currPose.getHeading()));
                 telemetry.addData("Ball Position:", "(x, y): (%.2f,%.2f)",ballpos[0], ballpos[1]);
                 telemetry.update();
-                if (follower.atParametricEnd() || !follower.isBusy()) {
-                    PathChain triangle = follower.pathBuilder()
+
+                double dx = ballPose.getX() - currPose.getX();
+                double dy = ballPose.getY() - currPose.getY();
+
+                double distance = Math.hypot(dx, dy);
+                if (distance <= ARRIVAL_RADIUS) {
+
+                    // We've reached the ball
+                    follower.breakFollowing();
+                    intake_motor.setVelocity(0);
+
+                    telemetry.addData("ARRIVED", "true");
+
+                } else if (!follower.isBusy()) {
+
+                    PathChain path = follower.pathBuilder()
                             .addPath(new BezierLine(currPose, ballPose))
-                            .setLinearHeadingInterpolation(currPose.getHeading(), ballPose.getHeading())
+                            .setLinearHeadingInterpolation(
+                                    currPose.getHeading(),
+                                    ballPose.getHeading()
+                            )
                             .build();
 
                     intaker.takeIn(435);
