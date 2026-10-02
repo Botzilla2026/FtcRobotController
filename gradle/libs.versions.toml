@@ -1,0 +1,30 @@
+[versions]
+agp = "9.4.1"
+appcompat = "1.8.0"
+core = "3.0.1"
+gradle-toolchains-foojay-resolver-convention = "1.0.0"
+inspection = "12.0.0"
+pedro = "1.1.1"
+telemetry = "1.0.0"
+tuning = "1.0.1"
+
+[libraries]
+appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+blocks = { module = "org.firstinspires.ftc:Blocks", version.ref = "inspection" }
+core = { module = "com.pedropathing:core", version.ref = "core" }
+ftccommon = { module = "org.firstinspires.ftc:FtcCommon", version.ref = "inspection" }
+hardware = { module = "org.firstinspires.ftc:Hardware", version.ref = "inspection" }
+inspection = { module = "org.firstinspires.ftc:Inspection", version.ref = "inspection" }
+onbotjava = { module = "org.firstinspires.ftc:OnBotJava", version.ref = "inspection" }
+pedro = { module = "com.pedropathing.ivy:pedro", version.ref = "pedro" }
+revhub = { module = "com.pedropathing:revhub", version.ref = "core" }
+robotcore = { module = "org.firstinspires.ftc:RobotCore", version.ref = "inspection" }
+robotserver = { module = "org.firstinspires.ftc:RobotServer", version.ref = "inspection" }
+telemetry = { module = "com.pedropathing:telemetry", version.ref = "telemetry" }
+tuning = { module = "com.pedropathing:tuning", version.ref = "tuning" }
+vision = { module = "org.firstinspires.ftc:Vision", version.ref = "inspection" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "gradle-toolchains-foojay-resolver-convention" }
