@@ -22,7 +22,12 @@ public class AutoMain extends LinearOpMode {
     // ------------------- Pedro Pathing / Vision -------------------
     Pose currPose;
     Pose ballPose;
+
+    Pose shootPose = new Pose(27.0, 0.0, 90.0);
     Lodo lodo = new Lodo();
+
+    int BallCount = 0;
+    int BallCap = 1;
 
     private enum State {
         SEARCHING,   // no ball detected yet, everything idle
@@ -37,6 +42,7 @@ public class AutoMain extends LinearOpMode {
     @Override
     public void runOpMode() {
         IntakeAuto intaker = new IntakeAuto(hardwareMap);
+        OuttakeAuto outtaker = new OuttakeAuto(hardwareMap);
         double[] ballpos;
 
         // ------------------- Mechanisms (ported from TeleOp) -------------------
@@ -118,8 +124,9 @@ public class AutoMain extends LinearOpMode {
                     new double[]{currPose.getX(), currPose.getY(), Math.toDegrees(currPose.getHeading())},
                     hardwareMap
             );
+            if (BallCount == BallCap){
 
-            if (ballpos != null && ballpos.length != 0) {
+            } else if (ballpos != null && ballpos.length != 0) {
                 ballPose = new Pose(ballpos[0], ballpos[1], Math.toRadians(ballpos[2]));
                 telemetry.addData("Current Position:", "(x,y,h): (%.2f,%.2f,%.2f)", currPose.getX(), currPose.getY(), Math.toDegrees(currPose.getHeading()));
                 telemetry.addData("Ball Position:", "(x, y): (%.2f,%.2f)",ballpos[0], ballpos[1]);
@@ -134,8 +141,22 @@ public class AutoMain extends LinearOpMode {
                     // We've reached the ball
                     follower.breakFollowing();
                     intake_motor.setVelocity(0);
-
                     telemetry.addData("ARRIVED", "true");
+                    telemetry.addLine("Shooting...");
+                    follower.update();
+
+                    // travel to shooting position
+                    PathChain path = follower.pathBuilder()
+                            .addPath(new BezierLine(currPose, shootPose))
+                            .setLinearHeadingInterpolation(
+                                    currPose.getHeading(),
+                                    shootPose.getHeading()
+                            )
+                            .build();
+
+                    follower.followPath(path, true);
+                    outtaker.shootOut(425);
+
 
                 } else if (!follower.isBusy()) {
 
@@ -150,7 +171,7 @@ public class AutoMain extends LinearOpMode {
                     intaker.takeIn(435);
                     telemetry.addData("On:", "true");
                     follower.followPath(path, true);
-                    intaker.stopTake();
+
                 }
             } else {
                 control_motor.setVelocity(0);
