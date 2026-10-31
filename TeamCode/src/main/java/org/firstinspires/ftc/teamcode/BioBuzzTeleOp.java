@@ -11,7 +11,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 public class BioBuzzTeleOp extends LinearOpMode {
 
     // ---------- Settings you can tweak ----------
-    static final double OUTTAKE_RPM = 4500;
+    static final double OUTTAKE_RPM = 3500;
     static final double OUTTAKE_TICKS_PER_REV = 28;   // goBILDA 5203 6000rpm motor (bare). Change if geared.
     static final double OUTTAKE_TICKS_PER_SEC = OUTTAKE_RPM * OUTTAKE_TICKS_PER_REV / 60.0;
 
@@ -52,11 +52,14 @@ public class BioBuzzTeleOp extends LinearOpMode {
 
         // ---------- Toggle state ----------
         boolean intakeOn = false, windmillOn = false, outtakeOn = false;
-        boolean lastA = false, lastX = false, lastY = false;
 
-        telemetry.addLine("Ready. A = Intake, X = Windmill, Y = Outtake");
+        telemetry.addLine("Ready. RB = Intake, LB = Windmill, Y = Outtake");
         telemetry.update();
         waitForStart();
+        // intake: rb, windmill: lb, outtake: y
+        boolean lastRB = false;
+        boolean lastLB = false;
+        boolean lastY = false;
 
         while (opModeIsActive()) {
             // ---------- Drivetrain (arcade): left stick = forward/back, right stick = turn ----------
@@ -66,12 +69,16 @@ public class BioBuzzTeleOp extends LinearOpMode {
         rightDrive.setPower(drive - turn);
 
             // ---------- Toggles (rising edge detection) ----------
-            if (gamepad1.a && !lastA) intakeOn = !intakeOn;     // Intake motor + side servos
-            if (gamepad1.x && !lastX) windmillOn = !windmillOn; // Transfer windmill
-            if (gamepad1.y && !lastY) outtakeOn = !outtakeOn;   // Outtake flywheel
-            lastA = gamepad1.a;
-            lastX = gamepad1.x;
-            lastY = gamepad1.y;
+            boolean rbPressed = gamepad1.right_bumper;
+            boolean lbPressed = gamepad1.left_bumper; // trigger is analog, so threshold it
+            boolean yPressed = gamepad1.y;
+
+            if (rbPressed && !lastRB) intakeOn = !intakeOn;     // RB: Intake motor + side servos
+            if (lbPressed && !lastLB) windmillOn = !windmillOn; // RT: Transfer windmill
+            if (yPressed && !lastY) outtakeOn = !outtakeOn;   // LB: Outtake flywheel
+            lastRB = rbPressed;
+            lastLB = lbPressed;
+            lastY = yPressed;
 
             // ---------- Intake ----------
             intakeMotor.setPower(intakeOn ? INTAKE_POWER : 0);
