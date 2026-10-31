@@ -35,11 +35,11 @@ public class BioBuzzTeleOp extends LinearOpMode {
         leftDrive.setDirection(DcMotorSimple.Direction.FORWARD);
         rightDrive.setDirection(DcMotorSimple.Direction.REVERSE);   // flip if robot drives backwards
         intakeMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        outtakeMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        outtakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Side servos spin opposite directions to pull balls toward the center
-        rightIntakeServo.setDirection(DcMotorSimple.Direction.FORWARD);
-        leftIntakeServo.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightIntakeServo.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftIntakeServo.setDirection(DcMotorSimple.Direction.FORWARD);
         windmillServo.setDirection(DcMotorSimple.Direction.FORWARD);
 
         // ---------- Motor modes ----------
@@ -61,13 +61,9 @@ public class BioBuzzTeleOp extends LinearOpMode {
         while (opModeIsActive()) {
             // ---------- Drivetrain (arcade): left stick = forward/back, right stick = turn ----------
             double drive = -gamepad1.left_stick_y;
-            double turn  = gamepad1.right_stick_x;
-            double leftPower  = drive + turn;
-            double rightPower = drive - turn;
-
-            double max = Math.max(1.0, Math.max(Math.abs(leftPower), Math.abs(rightPower)));
-            leftDrive.setPower(leftPower / max);
-            rightDrive.setPower(rightPower / max);
+            double turn = gamepad1.right_stick_x;
+            leftDrive.setPower(drive + turn);
+        rightDrive.setPower(drive - turn);
 
             // ---------- Toggles (rising edge detection) ----------
             if (gamepad1.a && !lastA) intakeOn = !intakeOn;     // Intake motor + side servos
@@ -96,7 +92,8 @@ public class BioBuzzTeleOp extends LinearOpMode {
             double outtakeRpm = outtakeMotor.getVelocity() * 60.0 / OUTTAKE_TICKS_PER_REV;
             telemetry.addData("Drive: ", drive);
             telemetry.addData("Turn: ", turn);
-            telemetry.addData("Max: ", max);
+            telemetry.addData("Left power", leftDrive.getPower());
+            telemetry.addData("Right power", rightDrive.getPower());
             telemetry.addData("Intake", intakeOn ? "ON" : "OFF");
             telemetry.addData("Windmill", windmillOn ? "ON" : "OFF");
             telemetry.addData("Outtake", outtakeOn ? "ON" : "OFF");
