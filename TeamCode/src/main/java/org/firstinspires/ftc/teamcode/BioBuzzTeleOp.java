@@ -11,9 +11,9 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 public class BioBuzzTeleOp extends LinearOpMode {
 
     // ---------- Settings you can tweak ----------
-    static final double OUTTAKE_RPM = 3500;
+    double OUTTAKE_RPM = 3500;
     static final double OUTTAKE_TICKS_PER_REV = 28;   // goBILDA 5203 6000rpm motor (bare). Change if geared.
-    static final double OUTTAKE_TICKS_PER_SEC = OUTTAKE_RPM * OUTTAKE_TICKS_PER_REV / 60.0;
+    double OUTTAKE_TICKS_PER_SEC = OUTTAKE_RPM * OUTTAKE_TICKS_PER_REV / 60.0;
 
     static final double INTAKE_POWER = 1.0;
     static final double SIDE_SERVO_POWER = 1.0;
@@ -38,8 +38,8 @@ public class BioBuzzTeleOp extends LinearOpMode {
         outtakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Side servos spin opposite directions to pull balls toward the center
-        rightIntakeServo.setDirection(DcMotorSimple.Direction.FORWARD);
-        leftIntakeServo.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightIntakeServo.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftIntakeServo.setDirection(DcMotorSimple.Direction.FORWARD);
         windmillServo.setDirection(DcMotorSimple.Direction.FORWARD);
 
         // ---------- Motor modes ----------
@@ -61,8 +61,13 @@ public class BioBuzzTeleOp extends LinearOpMode {
         boolean lastLB = false;
         boolean lastY = false;
 
+        boolean lastDdown = false;
+        boolean lastDup = false;
+        boolean lastDleft = false;
+
         while (opModeIsActive()) {
             // ---------- Drivetrain (arcade): left stick = forward/back, right stick = turn ----------
+
             double drive = -gamepad1.left_stick_y;
             double turn  = gamepad1.right_stick_x;
             double leftPower  = drive + turn;
@@ -71,6 +76,23 @@ public class BioBuzzTeleOp extends LinearOpMode {
             double max = Math.max(1.0, Math.max(Math.abs(leftPower), Math.abs(rightPower)));
             leftDrive.setPower(leftPower / max);
             rightDrive.setPower(rightPower / max);
+
+            if (gamepad1.dpad_down && !lastDdown && OUTTAKE_RPM >= 3500){
+                OUTTAKE_RPM -= 300;
+                OUTTAKE_TICKS_PER_SEC = OUTTAKE_RPM * OUTTAKE_TICKS_PER_REV / 60.0;
+            }
+            if (gamepad1.dpad_up && !lastDup && OUTTAKE_RPM <= 3500){
+                OUTTAKE_RPM += 300;
+                OUTTAKE_TICKS_PER_SEC = OUTTAKE_RPM * OUTTAKE_TICKS_PER_REV / 60.0;
+            }
+            if (gamepad1.dpad_left && !lastDleft){
+                OUTTAKE_RPM = 3500;
+                OUTTAKE_TICKS_PER_SEC = OUTTAKE_RPM * OUTTAKE_TICKS_PER_REV / 60.0;
+            }
+
+            lastDup = gamepad1.dpad_up;
+            lastDdown = gamepad1.dpad_down;
+            lastDleft = gamepad1.dpad_left;
 
             // ---------- Toggles (rising edge detection) ----------
             boolean rbPressed = gamepad1.right_bumper;
