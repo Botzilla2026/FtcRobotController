@@ -1,9 +1,32 @@
 [versions]
-gradle = "9.3.1"
+appcompat = "1.8.0"
+core = "1.1.1"
+ftc = "2.1.2"
+fullpanels = "1.0.12"
+gradle = "9.4.1"
 foojay-resolver = "1.0.0"
+inspection = "12.0.0"
+revhub = "3.0.2"
+telemetry = "1.0.0"
 
 [libraries]
+appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+blocks = { module = "org.firstinspires.ftc:Blocks", version.ref = "inspection" }
+core = { module = "com.pedropathing.ivy:core", version.ref = "core" }
+ftc = { module = "com.pedropathing:ftc", version.ref = "ftc" }
+ftccommon = { module = "org.firstinspires.ftc:FtcCommon", version.ref = "inspection" }
+fullpanels = { module = "com.bylazar:fullpanels", version.ref = "fullpanels" }
 gradle = { group = "com.android.tools.build", name = "gradle", version.ref = "gradle" }
+hardware = { module = "org.firstinspires.ftc:Hardware", version.ref = "inspection" }
+inspection = { module = "org.firstinspires.ftc:Inspection", version.ref = "inspection" }
+onbotjava = { module = "org.firstinspires.ftc:OnBotJava", version.ref = "inspection" }
+pedro = { module = "com.pedropathing.ivy:pedro", version.ref = "core" }
+revhub = { module = "com.pedropathing:revhub", version.ref = "revhub" }
+robotcore = { module = "org.firstinspires.ftc:RobotCore", version.ref = "inspection" }
+robotserver = { module = "org.firstinspires.ftc:RobotServer", version.ref = "inspection" }
+telemetry = { module = "com.pedropathing:telemetry", version.ref = "telemetry" }
+tuning = { module = "com.pedropathing:tuning", version.ref = "telemetry" }
+vision = { module = "org.firstinspires.ftc:Vision", version.ref = "inspection" }
 
 [plugins]
 foojay-resolver = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay-resolver" }
