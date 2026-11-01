@@ -30,3 +30,4 @@ vision = { module = "org.firstinspires.ftc:Vision", version.ref = "inspection" }
 
 [plugins]
 foojay-resolver = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay-resolver" }
+
