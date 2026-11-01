@@ -7,3 +7,4 @@ gradle = { group = "com.android.tools.build", name = "gradle", version.ref = "gr
 
 [plugins]
 foojay-resolver = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay-resolver" }
+
