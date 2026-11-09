@@ -36,7 +36,7 @@ public class BioBuzzAutoOp extends LinearOpMode{
         telemetry.setMsTransmissionInterval(50);
 
         DcMotor leftDrive  = hardwareMap.get(DcMotor.class, "leftDrive");     // Control Hub motor port 0
-        DcMotor rightDrive = hardwareMap.get(DcMotor.class, "rightDrive");    // Control Hub motor port 1
+        DcMotor rightDrive = hardwareMap.get(DcMotor.class, "rigDhtDrive");    // Control Hub motor port 1
         DcMotor intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");  // Control Hub motor port 2
         DcMotorEx outtakeMotor = hardwareMap.get(DcMotorEx.class, "outtake"); // Control Hub motor port 3
 
