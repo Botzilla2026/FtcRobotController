@@ -7,6 +7,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+
 @TeleOp(name = "BioBuzz TeleOp", group = "Main")
 public class BioBuzzTeleOp extends LinearOpMode {
 
@@ -64,6 +66,8 @@ public class BioBuzzTeleOp extends LinearOpMode {
         boolean lastDdown = false;
         boolean lastDup = false;
         boolean lastDleft = false;
+        boolean lastDright = false;
+        boolean intakeMotorIn = true;
 
         while (opModeIsActive()) {
             // ---------- Drivetrain (arcade): left stick = forward/back, right stick = turn ----------
@@ -77,6 +81,7 @@ public class BioBuzzTeleOp extends LinearOpMode {
             leftDrive.setPower(leftPower / max);
             rightDrive.setPower(rightPower / max);
 
+
             if (gamepad1.dpad_down && !lastDdown && OUTTAKE_RPM >= 3500){
                 OUTTAKE_RPM -= 300;
                 OUTTAKE_TICKS_PER_SEC = OUTTAKE_RPM * OUTTAKE_TICKS_PER_REV / 60.0;
@@ -89,10 +94,21 @@ public class BioBuzzTeleOp extends LinearOpMode {
                 OUTTAKE_RPM = 3500;
                 OUTTAKE_TICKS_PER_SEC = OUTTAKE_RPM * OUTTAKE_TICKS_PER_REV / 60.0;
             }
+            if (gamepad1.dpad_right && !lastDright){
+                intakeMotorIn = !intakeMotorIn;
+                if (intakeMotorIn){
+                    intakeMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+                }
+                else{
+                    intakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+                }
+            }
+
 
             lastDup = gamepad1.dpad_up;
             lastDdown = gamepad1.dpad_down;
             lastDleft = gamepad1.dpad_left;
+            lastDright = gamepad1.dpad_right;
 
             // ---------- Toggles (rising edge detection) ----------
             boolean rbPressed = gamepad1.right_bumper;
@@ -130,6 +146,8 @@ public class BioBuzzTeleOp extends LinearOpMode {
             telemetry.addData("Windmill", windmillOn ? "ON" : "OFF");
             telemetry.addData("Outtake", outtakeOn ? "ON" : "OFF");
             telemetry.addData("Outtake RPM", "%.0f / %.0f", outtakeRpm, OUTTAKE_RPM);
+            telemetry.addData("R power", rightDrive.getPower());
+            telemetry.addData("R pos", rightDrive.getCurrentPosition());
             telemetry.update();
         }
 
